@@ -2,6 +2,7 @@
 from genlayer import *
 from dataclasses import dataclass
 import json
+import hashlib
 
 CANARY_TOKEN = "CANARY_AGENT_QUANTUM_GUARD_V1"
 ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
@@ -127,14 +128,8 @@ class Contract(gl.Contract):
 
     def __init__(self):
         # GenVM auto-initializes TreeMap and DynArray.
-        # Deterministically binds deployer as protocol owner upon contract creation.
-        deployer = Address(ZERO_ADDRESS)
-        try:
-            deployer = _get_sender()
-        except Exception:
-            pass
-
-        self.owner = deployer
+        # Initialize owner as zero address to prevent AST Schema Parser crashes.
+        self.owner = Address(ZERO_ADDRESS)
         self.total_migration_locked = bigint(0)
         self.total_audits_settled = u32(0)
         self.escrow_counter = u64(0)
@@ -143,6 +138,7 @@ class Contract(gl.Contract):
         return str(escrow_id).strip()
 
     def _ensure_owner(self) -> None:
+        """Lazy initialization of owner on the first authorized transaction."""
         if _addr_str(self.owner) == ZERO_ADDRESS:
             self.owner = _get_sender()
 
@@ -304,7 +300,6 @@ class Contract(gl.Contract):
         expected_hash = e.spec_evidence_hash
 
         def leader_fn():
-            import hashlib
             raw_doc = ""
             try:
                 raw_doc = gl.nondet.web.render(doc_url, mode="text")
