@@ -8,7 +8,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 
 def seed_escrow():
     print("[*] Seeding sample PQC Migration Escrow on StudioNet...")
-    contract_addr = "0xAF808C4857Ec4593e3CbFfed67D42AbB40FF9107"
+    contract_addr = "0xe865d69cf40d92ffD02CcA1A7FBdfff6E2Ef7616"
     
     enterprise = create_account()
     client_enterprise = create_client(chain=studionet, account=enterprise)

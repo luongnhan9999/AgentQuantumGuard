@@ -40,8 +40,8 @@ To avoid catastrophic protocol collapse, financial institutions, DAOs, and Web3 
 - **Consensus Runtime:** GenLayer GenVM Python (`py-genlayer`)
 - **Target Network:** GenLayer StudioNet (Chain ID: `61999` / Hex: `0xF22F`)
 - **RPC Endpoint:** `https://studio.genlayer.com/api`
-- **Authoritative Deployed Address:** [`0xAF808C4857Ec4593e3CbFfed67D42AbB40FF9107`](https://explorer-studio.genlayer.com/address/0xAF808C4857Ec4593e3CbFfed67D42AbB40FF9107)
-- **Block Explorer:** [View Contract on GenLayer Studio Explorer](https://explorer-studio.genlayer.com/address/0xAF808C4857Ec4593e3CbFfed67D42AbB40FF9107)
+- **Authoritative Deployed Address:** [`0xe865d69cf40d92ffD02CcA1A7FBdfff6E2Ef7616`](https://explorer-studio.genlayer.com/address/0xe865d69cf40d92ffD02CcA1A7FBdfff6E2Ef7616)
+- **Block Explorer:** [View Contract on GenLayer Studio Explorer](https://explorer-studio.genlayer.com/address/0xe865d69cf40d92ffD02CcA1A7FBdfff6E2Ef7616)
 
 ### Lifecycle State Machine
 

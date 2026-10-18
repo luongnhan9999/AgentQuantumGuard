@@ -4,7 +4,7 @@ import time
 from genlayer_py import create_client, studionet, create_account
 
 sys.stdout.reconfigure(encoding='utf-8')
-contract_addr = '0xAF808C4857Ec4593e3CbFfed67D42AbB40FF9107'
+contract_addr = '0xe865d69cf40d92ffD02CcA1A7FBdfff6E2Ef7616'
 
 def main():
     print("[*] Testing on-chain AI PQC Compliance Adjudication on StudioNet...")

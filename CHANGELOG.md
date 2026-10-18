@@ -19,7 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
     - `AppealModal.tsx`: 24-block (~72s) dispute portal requiring 10% staked bond with accredited URL enforcement.
     - `PullPayoutButton.tsx`: Pull-payment claims interface.
 - **On-Chain Deployment on GenLayer StudioNet**:
-  - Authoritative Contract Address: `0xAF808C4857Ec4593e3CbFfed67D42AbB40FF9107`
+  - Authoritative Contract Address: `0xe865d69cf40d92ffD02CcA1A7FBdfff6E2Ef7616`
   - Network: Chain ID 61999 / Hex `0xF22F`
   - Live production deployment on Vercel.
 

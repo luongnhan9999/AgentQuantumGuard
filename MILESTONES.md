@@ -11,8 +11,8 @@ This document provides formal technical evidence and architectural comparison fo
 | **Project Name** | **AgentQuantumGuard** |
 | **Domain** | Web3 CyberSecurity / Post-Quantum Cryptography (PQC) / NIST Standards / Infrastructure Escrow |
 | **Target Network** | GenLayer StudioNet (Chain ID: `61999` / Hex: `0xF22F`) |
-| **Authoritative Contract** | `0xAF808C4857Ec4593e3CbFfed67D42AbB40FF9107` |
-| **Explorer Link** | [View on GenLayer Studio Explorer](https://explorer-studio.genlayer.com/address/0xAF808C4857Ec4593e3CbFfed67D42AbB40FF9107) |
+| **Authoritative Contract** | `0xe865d69cf40d92ffD02CcA1A7FBdfff6E2Ef7616` |
+| **Explorer Link** | [View on GenLayer Studio Explorer](https://explorer-studio.genlayer.com/address/0xe865d69cf40d92ffD02CcA1A7FBdfff6E2Ef7616) |
 | **Live Production dApp** | [agent-quantum-guard.vercel.app](https://agent-quantum-guard.vercel.app) |
 | **Repository** | [github.com/luongnhan9999/AgentQuantumGuard](https://github.com/luongnhan9999/AgentQuantumGuard) |
 
@@ -62,7 +62,7 @@ This document provides formal technical evidence and architectural comparison fo
   - Theme: Quantum Obsidian & Deep Indigo (`#070913`) with elevated dark slate surfaces (`#0F1424`), neural cyan (`#06B6D4`), and quantum violet (`#8B5CF6`) accents.
   - Direct on-chain integration via `genlayer-js` on GenLayer StudioNet (Chain ID: `61999` / Hex `0xF22F`).
   - Modals: `CreateEscrowModal`, `SubmitDeliverableModal` (with in-browser SHA-256 calculator), `PQCInspectorModal` (with mathematical rubric breakdown), `AppealModal`, and `PullPayoutButton`.
-  - Production deployment to Vercel connected directly to contract `0xAF808C4857Ec4593e3CbFfed67D42AbB40FF9107`.
+  - Production deployment to Vercel connected directly to contract `0xe865d69cf40d92ffD02CcA1A7FBdfff6E2Ef7616`.
 
 ---
 
