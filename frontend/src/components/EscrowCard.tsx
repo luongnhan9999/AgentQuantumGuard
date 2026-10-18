@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, Send, Scale, Gavel, CheckCircle2, AlertCircle, Eye, ArrowRight, Clock } from 'lucide-react';
+import { Shield, Send, Scale, Gavel, CheckCircle2, AlertCircle, Eye, ArrowRight, Clock, User, KeyRound, ShieldCheck } from 'lucide-react';
 import { PQCEscrowRecord } from '../config/genlayer';
 import { formatAddress, formatGen, formatTimestamp, getStatusInfo, getCategoryLabel } from '../utils/formatters';
 
@@ -9,8 +9,8 @@ interface EscrowCardProps {
   onOpenSubmitModal: (escrow: PQCEscrowRecord) => void;
   onOpenInspectModal: (escrow: PQCEscrowRecord) => void;
   onOpenAppealModal: (escrow: PQCEscrowRecord) => void;
+  onOpenAdjudicateAppealModal: (escrow: PQCEscrowRecord) => void;
   onAdjudicate: (escrowId: string) => Promise<void>;
-  onAdjudicateAppeal: (escrowId: string) => Promise<void>;
   onFinalize: (escrowId: string) => Promise<void>;
   onReclaim: (escrowId: string) => Promise<void>;
   loadingAction: string | null;
@@ -22,8 +22,8 @@ export const EscrowCard: React.FC<EscrowCardProps> = ({
   onOpenSubmitModal,
   onOpenInspectModal,
   onOpenAppealModal,
+  onOpenAdjudicateAppealModal,
   onAdjudicate,
-  onAdjudicateAppeal,
   onFinalize,
   onReclaim,
   loadingAction,
@@ -101,12 +101,18 @@ export const EscrowCard: React.FC<EscrowCardProps> = ({
       {/* Stakeholders & Timestamps */}
       <div className="mt-4 pt-3 border-t border-obsidian-750/80 grid grid-cols-2 gap-2 text-xs font-mono">
         <div>
-          <span className="text-slate-500 block text-[10px] uppercase">Enterprise Client</span>
+          <span className="text-slate-500 block text-[10px] uppercase flex items-center gap-1">
+            <User className="w-3 h-3 text-quantum-cyan" /> Enterprise Client
+          </span>
           <span className="text-slate-300">{formatAddress(escrow.client)}</span>
+          {isClient && <span className="text-[10px] text-quantum-cyan block font-semibold">★ You</span>}
         </div>
         <div>
-          <span className="text-slate-500 block text-[10px] uppercase">PQC Cryptographer</span>
+          <span className="text-slate-500 block text-[10px] uppercase flex items-center gap-1">
+            <KeyRound className="w-3 h-3 text-quantum-emerald" /> Cryptographer
+          </span>
           <span className="text-slate-300">{formatAddress(escrow.cryptographer)}</span>
+          {isCryptographer && <span className="text-[10px] text-quantum-emerald block font-semibold">★ You</span>}
         </div>
       </div>
 
@@ -182,15 +188,10 @@ export const EscrowCard: React.FC<EscrowCardProps> = ({
           {/* Status 6: Disputed (Appellate Court) */}
           {escrow.status === 6 && (
             <button
-              onClick={() => onAdjudicateAppeal(escrow.escrow_id)}
-              disabled={isActionLoading('appeal')}
+              onClick={() => onOpenAdjudicateAppealModal(escrow)}
               className="px-3.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg text-xs font-mono font-medium shadow-md shadow-purple-950 transition-all flex items-center gap-1.5"
             >
-              {isActionLoading('appeal') ? (
-                <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
-              ) : (
-                <Gavel className="w-3.5 h-3.5" />
-              )}
+              <Gavel className="w-3.5 h-3.5" />
               <span>Adjudicate Appeal</span>
             </button>
           )}

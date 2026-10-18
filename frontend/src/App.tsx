@@ -2,12 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { createClient } from 'genlayer-js';
 import { studionet } from 'genlayer-js/chains';
 import { Navbar } from './components/Navbar';
+import { QuantumTelemetryRibbon } from './components/QuantumTelemetryRibbon';
+import { RoleBanner, UserRole } from './components/RoleBanner';
 import { StatsOverview } from './components/StatsOverview';
+import { QuantumCommandCockpit } from './components/QuantumCommandCockpit';
 import { EscrowCard } from './components/EscrowCard';
 import { CreateEscrowModal } from './components/CreateEscrowModal';
 import { SubmitDeliverableModal } from './components/SubmitDeliverableModal';
 import { PQCInspectorModal } from './components/PQCInspectorModal';
 import { AppealModal } from './components/AppealModal';
+import { AdjudicateAppealModal } from './components/AdjudicateAppealModal';
 import { PullPayoutButton } from './components/PullPayoutButton';
 import {
   DEFAULT_CONTRACT_ADDRESS,
@@ -31,7 +35,9 @@ import {
   Binary,
   CheckCircle2,
   AlertTriangle,
-  Info
+  Info,
+  LayoutGrid,
+  Columns3
 } from 'lucide-react';
 
 export function App() {
@@ -41,12 +47,17 @@ export function App() {
   const [connecting, setConnecting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Contract Data
+  // Contract Data (100% On-Chain)
   const [stats, setStats] = useState<ProtocolStats | null>(null);
   const [escrows, setEscrows] = useState<PQCEscrowRecord[]>([]);
+  const [selectedEscrow, setSelectedEscrow] = useState<PQCEscrowRecord | null>(null);
   const [claimableBalance, setClaimableBalance] = useState<string>("0");
 
-  // Filtering & Search
+  // Layout Mode: 'cockpit' (3-Panel Command Center) vs 'grid' (Ledger Grid)
+  const [layoutMode, setLayoutMode] = useState<'cockpit' | 'grid'>('cockpit');
+
+  // RBAC Role Filter & Tabs
+  const [selectedRole, setSelectedRole] = useState<UserRole>('all');
   const [activeTab, setActiveTab] = useState<'all' | 'open' | 'awaiting' | 'settled' | 'disputed' | 'mine'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -55,6 +66,7 @@ export function App() {
   const [submitEscrow, setSubmitEscrow] = useState<PQCEscrowRecord | null>(null);
   const [inspectEscrow, setInspectEscrow] = useState<PQCEscrowRecord | null>(null);
   const [appealEscrow, setAppealEscrow] = useState<PQCEscrowRecord | null>(null);
+  const [adjudicateAppealEscrow, setAdjudicateAppealEscrow] = useState<PQCEscrowRecord | null>(null);
 
   // Status & Transaction Loading
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
@@ -199,8 +211,19 @@ export function App() {
         args: [],
       });
       if (rawEscrows) {
-        const parsed = typeof rawEscrows === 'string' ? JSON.parse(rawEscrows) : rawEscrows;
-        setEscrows(parsed.reverse());
+        const parsed: PQCEscrowRecord[] = typeof rawEscrows === 'string' ? JSON.parse(rawEscrows) : rawEscrows;
+        const reversed = parsed.reverse();
+        setEscrows(reversed);
+
+        // Keep selected escrow updated
+        setSelectedEscrow((prev) => {
+          if (!prev && reversed.length > 0) return reversed[0];
+          if (prev) {
+            const updated = reversed.find((item) => item.escrow_id === prev.escrow_id);
+            return updated || (reversed.length > 0 ? reversed[0] : null);
+          }
+          return null;
+        });
       }
     } catch (err: any) {
       console.error("Error fetching on-chain state:", err);
@@ -225,7 +248,7 @@ export function App() {
     }
   };
 
-  // ── Write Transactions ─────────────────────────────────────────────
+  // ── Write Transactions (100% On-Chain) ─────────────────────────────
 
   const handleCreateEscrow = async (suite: string, category: number, blocks: number, depositGen: string) => {
     if (!account) {
@@ -351,6 +374,7 @@ export function App() {
       setTxNotice({ message: "Appellate jury cross-examining formal audit benchmarks...", type: "info" });
       await (client as any).waitForTransactionReceipt({ hash: tx });
       setTxNotice({ message: "Appellate ruling finalized and capital distributed!", type: "success" });
+      setAdjudicateAppealEscrow(null);
       await fetchContractState();
       if (account) fetchBalance(account);
     } catch (err: any) {
@@ -439,8 +463,15 @@ export function App() {
     }
   };
 
-  // Filtered List
+  // Filtered List based on tab, role perspective, and search query
   const filteredEscrows = escrows.filter((e) => {
+    // Role filter
+    if (selectedRole === 'client') {
+      if (account && e.client.toLowerCase() !== account.toLowerCase()) return false;
+    } else if (selectedRole === 'cryptographer') {
+      if (account && e.cryptographer.toLowerCase() !== account.toLowerCase()) return false;
+    }
+
     // Tab filter
     if (activeTab === 'open' && e.status !== 0) return false;
     if (activeTab === 'awaiting' && e.status !== 1 && e.status !== 2) return false;
@@ -465,9 +496,24 @@ export function App() {
     return true;
   });
 
+  const myEscrowCount = account
+    ? escrows.filter(
+        (e) =>
+          e.client.toLowerCase() === account.toLowerCase() ||
+          e.cryptographer.toLowerCase() === account.toLowerCase()
+      ).length
+    : 0;
+
   return (
     <div className="min-h-screen flex flex-col bg-obsidian-900 text-slate-100">
       
+      {/* Top Telemetry Ribbon */}
+      <QuantumTelemetryRibbon
+        totalLocked={stats?.total_migration_locked || "0"}
+        totalEscrows={stats?.total_escrows || escrows.length}
+        totalSettled={stats?.total_audits_settled || 0}
+      />
+
       {/* Navbar */}
       <Navbar
         account={account}
@@ -482,7 +528,7 @@ export function App() {
       />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         
         {/* Notification Toast */}
         {txNotice && (
@@ -515,90 +561,19 @@ export function App() {
           loading={loadingAction === "claim-pull"}
         />
 
-        {/* Hero Section */}
-        <div className="relative mb-8 p-6 sm:p-8 rounded-2xl bg-gradient-to-r from-obsidian-850 via-obsidian-850 to-purple-950/40 border border-obsidian-750 overflow-hidden shadow-2xl">
-          <div className="max-w-3xl relative z-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-quantum-violet/10 border border-quantum-violet/30 text-quantum-violet text-xs font-mono font-semibold mb-3">
-              <Binary className="w-3.5 h-3.5" />
-              <span>NIST Post-Quantum Cryptography Migration Escrow</span>
-            </div>
-            <h1 className="text-2xl sm:text-4xl font-display font-extrabold text-white tracking-tight leading-tight">
-              Autonomous Key Verification & PQC Migration Tribunal
-            </h1>
-            <p className="mt-3 text-sm sm:text-base text-slate-300 font-sans leading-relaxed">
-              Guarding Web3 and financial infrastructure against quantum attacks (Shor's Algorithm).
-              GenLayer AI Consensus autonomously verifies public key matrices, polynomial parameters, and CSRs against 
-              <strong className="text-quantum-cyan"> NIST FIPS 203 (ML-KEM)</strong>, <strong className="text-quantum-emerald">FIPS 204 (ML-DSA)</strong>, and <strong className="text-purple-300">FIPS 205 (SLH-DSA)</strong> before disbursing locked GEN capital.
-            </p>
-
-            <div className="mt-6 flex flex-wrap items-center gap-3">
-              <button
-                onClick={() => setIsCreateOpen(true)}
-                className="px-5 py-2.5 bg-gradient-to-r from-quantum-violet to-purple-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-sm font-display font-semibold shadow-lg shadow-purple-900/40 transition-all flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Initiate PQC Migration Escrow</span>
-              </button>
-
-              <button
-                onClick={fetchContractState}
-                disabled={refreshing}
-                className="px-4 py-2.5 bg-obsidian-800 hover:bg-obsidian-750 border border-obsidian-700 text-slate-300 hover:text-white rounded-xl text-sm font-mono transition-all flex items-center gap-2"
-              >
-                <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-quantum-cyan' : ''}`} />
-                <span>Sync StudioNet</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Background Ambient Glow */}
-          <div className="absolute top-0 right-0 w-96 h-96 bg-quantum-violet/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
-          <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-quantum-cyan/10 rounded-full blur-3xl pointer-events-none"></div>
-        </div>
+        {/* Role-Based Access Control Banner */}
+        <RoleBanner
+          account={account}
+          ownerAddress={stats?.owner || ""}
+          selectedRole={selectedRole}
+          onSelectRole={setSelectedRole}
+          myEscrowCount={myEscrowCount}
+        />
 
         {/* Stats Overview */}
         <StatsOverview stats={stats} escrows={escrows} />
 
-        {/* Standards Information Ribbon */}
-        <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-obsidian-850/60 border border-obsidian-750 p-4 rounded-xl flex items-start gap-3">
-            <div className="p-2 bg-quantum-cyan/10 border border-quantum-cyan/30 rounded-lg text-quantum-cyan shrink-0">
-              <Lock className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="text-xs font-mono font-semibold text-white">NIST FIPS 203: ML-KEM</div>
-              <p className="text-[11px] text-slate-400 font-mono mt-0.5">
-                Module-Lattice Key Encapsulation (Kyber). Verifies polynomial ring dimension n=256 and prime modulus q=3329.
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-obsidian-850/60 border border-obsidian-750 p-4 rounded-xl flex items-start gap-3">
-            <div className="p-2 bg-quantum-emerald/10 border border-quantum-emerald/30 rounded-lg text-quantum-emerald shrink-0">
-              <ShieldCheck className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="text-xs font-mono font-semibold text-white">NIST FIPS 204: ML-DSA</div>
-              <p className="text-[11px] text-slate-400 font-mono mt-0.5">
-                Module-Lattice Digital Signatures (Dilithium). Validates matrix dimensions and modulus q=8380417.
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-obsidian-850/60 border border-obsidian-750 p-4 rounded-xl flex items-start gap-3">
-            <div className="p-2 bg-purple-500/10 border border-purple-500/30 rounded-lg text-purple-400 shrink-0">
-              <Cpu className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="text-xs font-mono font-semibold text-white">NIST FIPS 205: SLH-DSA</div>
-              <p className="text-[11px] text-slate-400 font-mono mt-0.5">
-                Stateless Hash-based Signatures (SPHINCS+). High-assurance fail-safe resistant even if lattice assumptions fail.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Filter Tabs & Search Controls */}
+        {/* View Mode & Filter Controls */}
         <div className="mb-6 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
           
           {/* Tabs */}
@@ -609,7 +584,7 @@ export function App() {
               { id: 'awaiting', label: 'Under Review' },
               { id: 'settled', label: 'Settled' },
               { id: 'disputed', label: 'Disputed' },
-              { id: 'mine', label: 'My Contracts' },
+              { id: 'mine', label: `My Escrows (${myEscrowCount})` },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -625,58 +600,115 @@ export function App() {
             ))}
           </div>
 
-          {/* Search Box */}
-          <div className="relative min-w-[260px]">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by suite, ID, or address..."
-              className="w-full bg-obsidian-850 border border-obsidian-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-quantum-violet"
-            />
+          {/* Right Toolbar: Search & Layout Mode Toggle */}
+          <div className="flex items-center gap-2.5">
+            
+            {/* Search Box */}
+            <div className="relative min-w-[220px]">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search suite, ID, or address..."
+                className="w-full bg-obsidian-850 border border-obsidian-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-quantum-violet"
+              />
+            </div>
+
+            {/* Layout Mode Toggle */}
+            <div className="flex items-center bg-obsidian-850 border border-obsidian-700 rounded-lg p-0.5">
+              <button
+                onClick={() => setLayoutMode('cockpit')}
+                className={`p-1.5 rounded-md text-xs transition-all ${
+                  layoutMode === 'cockpit'
+                    ? 'bg-quantum-violet text-white'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Command Cockpit View"
+              >
+                <Columns3 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setLayoutMode('grid')}
+                className={`p-1.5 rounded-md text-xs transition-all ${
+                  layoutMode === 'grid'
+                    ? 'bg-quantum-violet text-white'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Ledger Grid View"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Initiate Escrow Button */}
+            <button
+              onClick={() => setIsCreateOpen(true)}
+              className="px-3.5 py-1.5 bg-gradient-to-r from-quantum-violet to-purple-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg text-xs font-display font-semibold shadow-md shadow-purple-950 transition-all flex items-center gap-1.5 whitespace-nowrap"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Create Escrow</span>
+            </button>
+
           </div>
 
         </div>
 
-        {/* Escrows Grid */}
-        {filteredEscrows.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filteredEscrows.map((escrow) => (
-              <EscrowCard
-                key={escrow.escrow_id}
-                escrow={escrow}
-                account={account}
-                onOpenSubmitModal={setSubmitEscrow}
-                onOpenInspectModal={setInspectEscrow}
-                onOpenAppealModal={setAppealEscrow}
-                onAdjudicate={handleAdjudicate}
-                onAdjudicateAppeal={handleAdjudicateAppeal}
-                onFinalize={handleFinalizeSettlement}
-                onReclaim={handleReclaimEscrow}
-                loadingAction={loadingAction}
-              />
-            ))}
-          </div>
+        {/* View Mode Render */}
+        {layoutMode === 'cockpit' ? (
+          <QuantumCommandCockpit
+            escrows={filteredEscrows}
+            selectedEscrow={selectedEscrow}
+            onSelectEscrow={setSelectedEscrow}
+            account={account}
+            onOpenSubmitModal={setSubmitEscrow}
+            onOpenInspectModal={setInspectEscrow}
+            onOpenAppealModal={setAppealEscrow}
+            onOpenAdjudicateAppealModal={setAdjudicateAppealEscrow}
+            onAdjudicate={handleAdjudicate}
+            onFinalize={handleFinalizeSettlement}
+            onReclaim={handleReclaimEscrow}
+            loadingAction={loadingAction}
+          />
         ) : (
-          <div className="bg-obsidian-850/40 border border-obsidian-750 rounded-2xl p-12 text-center">
-            <ShieldAlert className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-            <h4 className="font-display font-semibold text-lg text-slate-300">No PQC Escrows Found</h4>
-            <p className="text-xs text-slate-500 font-mono mt-1 max-w-md mx-auto">
-              {searchQuery
-                ? `No escrows matching "${searchQuery}". Try a different search term.`
-                : "No post-quantum migration escrows in this view. Click 'Initiate PQC Migration Escrow' to open a new contract."}
-            </p>
-            <div className="mt-5">
-              <button
-                onClick={() => setIsCreateOpen(true)}
-                className="px-4 py-2 bg-quantum-violet/20 hover:bg-quantum-violet/30 border border-quantum-violet/40 text-purple-300 rounded-lg text-xs font-mono transition-all inline-flex items-center gap-1.5"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Create Escrow Deposit</span>
-              </button>
+          filteredEscrows.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {filteredEscrows.map((escrow) => (
+                <EscrowCard
+                  key={escrow.escrow_id}
+                  escrow={escrow}
+                  account={account}
+                  onOpenSubmitModal={setSubmitEscrow}
+                  onOpenInspectModal={setInspectEscrow}
+                  onOpenAppealModal={setAppealEscrow}
+                  onOpenAdjudicateAppealModal={setAdjudicateAppealEscrow}
+                  onAdjudicate={handleAdjudicate}
+                  onFinalize={handleFinalizeSettlement}
+                  onReclaim={handleReclaimEscrow}
+                  loadingAction={loadingAction}
+                />
+              ))}
             </div>
-          </div>
+          ) : (
+            <div className="bg-obsidian-850/40 border border-obsidian-750 rounded-2xl p-12 text-center">
+              <ShieldAlert className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+              <h4 className="font-display font-semibold text-lg text-slate-300">No PQC Escrows Found</h4>
+              <p className="text-xs text-slate-500 font-mono mt-1 max-w-md mx-auto">
+                {searchQuery
+                  ? `No escrows matching "${searchQuery}". Try a different search term.`
+                  : "No post-quantum migration escrows in this view. Click 'Create Escrow' to deposit on StudioNet."}
+              </p>
+              <div className="mt-5">
+                <button
+                  onClick={() => setIsCreateOpen(true)}
+                  className="px-4 py-2 bg-quantum-violet/20 hover:bg-quantum-violet/30 border border-quantum-violet/40 text-purple-300 rounded-lg text-xs font-mono transition-all inline-flex items-center gap-1.5"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Deposit & Open Escrow</span>
+                </button>
+              </div>
+            </div>
+          )
         )}
 
       </main>
@@ -730,6 +762,7 @@ export function App() {
         isOpen={!!inspectEscrow}
         onClose={() => setInspectEscrow(null)}
         escrow={inspectEscrow}
+        account={account}
         onAdjudicate={handleAdjudicate}
         loading={!!(inspectEscrow && loadingAction === `${inspectEscrow.escrow_id}-adjudicate`)}
       />
@@ -740,6 +773,14 @@ export function App() {
         escrow={appealEscrow}
         onSubmit={handleAppealVerdict}
         loading={!!(appealEscrow && loadingAction === `${appealEscrow.escrow_id}-appeal`)}
+      />
+
+      <AdjudicateAppealModal
+        isOpen={!!adjudicateAppealEscrow}
+        onClose={() => setAdjudicateAppealEscrow(null)}
+        escrow={adjudicateAppealEscrow}
+        onAdjudicateAppeal={handleAdjudicateAppeal}
+        loading={!!(adjudicateAppealEscrow && loadingAction === `${adjudicateAppealEscrow.escrow_id}-appeal`)}
       />
 
     </div>
