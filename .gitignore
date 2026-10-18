@@ -1,0 +1,20 @@
+# Node / Frontend
+node_modules/
+dist/
+.vite/
+*.local
+
+# Python / Tests
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.venv/
+venv/
+*.log
+
+# Vercel & IDE
+.vercel/
+.idea/
+.vscode/
+*.swp
